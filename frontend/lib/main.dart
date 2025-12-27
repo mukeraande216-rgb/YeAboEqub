@@ -22,11 +22,59 @@ class EqubAppHome extends StatefulWidget {
 
 class _EqubAppHomeState extends State<EqubAppHome> {
   int _selectedIndex = 0;
+  final String adminPin = "1234"; // 🔐 CHANGE THIS TO YOUR DESIRED PIN
 
   final List<Widget> _pages = [
     EqubWheelPage(),
     EqubHistoryPage(),
   ];
+
+  // Logic to intercept the tap and ask for a PIN
+  void _onItemTapped(int index) {
+    if (index == 1) {
+      _showPinDialog();
+    } else {
+      setState(() {
+        _selectedIndex = index;
+      });
+    }
+  }
+
+  void _showPinDialog() {
+    TextEditingController _pinController = TextEditingController();
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Text("Admin Access"),
+        content: TextField(
+          controller: _pinController,
+          obscureText: true,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(hintText: "Enter 4-digit PIN"),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (_pinController.text == adminPin) {
+                Navigator.pop(context);
+                setState(() => _selectedIndex = 1);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text("Incorrect PIN!")),
+                );
+              }
+            },
+            child: Text("Login"),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +82,7 @@ class _EqubAppHomeState extends State<EqubAppHome> {
       body: _pages[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
-        onTap: (index) => setState(() => _selectedIndex = index),
+        onTap: _onItemTapped, // Intercepts the click
         items: [
           BottomNavigationBarItem(icon: Icon(Icons.pie_chart), label: "Wheel"),
           BottomNavigationBarItem(icon: Icon(Icons.settings), label: "Management"),
@@ -265,7 +313,6 @@ class _EqubHistoryPageState extends State<EqubHistoryPage> {
             ? Center(child: CircularProgressIndicator())
             : TabBarView(
                 children: [
-                  // Tab 1: Active Members (with Delete)
                   activeMembers.isEmpty
                       ? Center(child: Text("No active members"))
                       : ListView.builder(
@@ -281,7 +328,6 @@ class _EqubHistoryPageState extends State<EqubHistoryPage> {
                             );
                           },
                         ),
-                  // Tab 2: Winner History
                   winners.isEmpty
                       ? Center(child: Text("No winners yet!"))
                       : ListView.builder(
