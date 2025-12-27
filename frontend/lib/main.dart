@@ -37,7 +37,7 @@ class _EqubAppHomeState extends State<EqubAppHome> {
         onTap: (index) => setState(() => _selectedIndex = index),
         items: [
           BottomNavigationBarItem(icon: Icon(Icons.pie_chart), label: "Wheel"),
-          BottomNavigationBarItem(icon: Icon(Icons.history), label: "History & Add"),
+          BottomNavigationBarItem(icon: Icon(Icons.settings), label: "Management"),
         ],
       ),
     );
@@ -173,7 +173,7 @@ class _EqubWheelPageState extends State<EqubWheelPage> {
   }
 }
 
-// --- PAGE 2: HISTORY & ADD MEMBER ---
+// --- PAGE 2: HISTORY & MEMBER MANAGEMENT ---
 class EqubHistoryPage extends StatefulWidget {
   @override
   _EqubHistoryPageState createState() => _EqubHistoryPageState();
@@ -182,26 +182,31 @@ class EqubHistoryPage extends StatefulWidget {
 class _EqubHistoryPageState extends State<EqubHistoryPage> {
   final String baseUrl = "https://yeabo-backend.onrender.com";
   List winners = [];
+  List activeMembers = [];
   bool loading = true;
   final TextEditingController _nameController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    fetchWinners();
+    refreshData();
   }
 
-  Future<void> fetchWinners() async {
+  Future<void> refreshData() async {
+    setState(() => loading = true);
     try {
-      final response = await http.get(Uri.parse('$baseUrl/winners'));
-      if (response.statusCode == 200) {
+      final winRes = await http.get(Uri.parse('$baseUrl/winners'));
+      final memRes = await http.get(Uri.parse('$baseUrl/members'));
+      
+      if (mounted) {
         setState(() {
-          winners = json.decode(response.body);
+          winners = json.decode(winRes.body);
+          activeMembers = json.decode(memRes.body);
           loading = false;
         });
       }
     } catch (e) {
-      debugPrint("Error: $e");
+      debugPrint("Error refreshing data: $e");
     }
   }
 
@@ -213,7 +218,13 @@ class _EqubHistoryPageState extends State<EqubHistoryPage> {
       body: jsonEncode({"full_name": name}),
     );
     _nameController.clear();
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Added $name!")));
+    refreshData();
+  }
+
+  Future<void> deleteMember(int id) async {
+    await http.delete(Uri.parse('$baseUrl/delete-member/$id'));
+    refreshData();
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Member deleted")));
   }
 
   void _showAddMemberDialog() {
@@ -238,26 +249,57 @@ class _EqubHistoryPageState extends State<EqubHistoryPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text("History & Members")),
-      body: loading 
-        ? Center(child: CircularProgressIndicator())
-        : winners.isEmpty 
-          ? Center(child: Text("No winners yet!"))
-          : ListView.builder(
-              itemCount: winners.length,
-              itemBuilder: (context, index) {
-                return ListTile(
-                  leading: Icon(Icons.stars, color: Colors.amber),
-                  title: Text(winners[index]['full_name']),
-                  subtitle: Text("Won on: ${winners[index]['draw_date']?.substring(0, 10) ?? 'N/A'}"),
-                );
-              },
-            ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showAddMemberDialog,
-        child: Icon(Icons.person_add),
-        tooltip: "Add Member",
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text("Management"),
+          bottom: TabBar(
+            tabs: [
+              Tab(icon: Icon(Icons.people), text: "Active"),
+              Tab(icon: Icon(Icons.history), text: "History"),
+            ],
+          ),
+        ),
+        body: loading
+            ? Center(child: CircularProgressIndicator())
+            : TabBarView(
+                children: [
+                  // Tab 1: Active Members (with Delete)
+                  activeMembers.isEmpty
+                      ? Center(child: Text("No active members"))
+                      : ListView.builder(
+                          itemCount: activeMembers.length,
+                          itemBuilder: (context, index) {
+                            return ListTile(
+                              leading: CircleAvatar(child: Text(activeMembers[index]['full_name'][0])),
+                              title: Text(activeMembers[index]['full_name']),
+                              trailing: IconButton(
+                                icon: Icon(Icons.delete, color: Colors.red),
+                                onPressed: () => deleteMember(activeMembers[index]['id']),
+                              ),
+                            );
+                          },
+                        ),
+                  // Tab 2: Winner History
+                  winners.isEmpty
+                      ? Center(child: Text("No winners yet!"))
+                      : ListView.builder(
+                          itemCount: winners.length,
+                          itemBuilder: (context, index) {
+                            return ListTile(
+                              leading: Icon(Icons.stars, color: Colors.amber),
+                              title: Text(winners[index]['full_name']),
+                              subtitle: Text("Won: ${winners[index]['draw_date']?.substring(0, 10) ?? 'N/A'}"),
+                            );
+                          },
+                        ),
+                ],
+              ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: _showAddMemberDialog,
+          child: Icon(Icons.person_add),
+        ),
       ),
     );
   }

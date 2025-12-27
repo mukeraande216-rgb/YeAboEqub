@@ -11,7 +11,7 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
-// 1. GET: Fetch members who haven't won yet (For the Wheel)
+// 1. GET: Fetch members who haven't won yet
 app.get('/members', async (req, res) => {
   try {
     const result = await pool.query('SELECT id, full_name FROM equb_members WHERE has_won = FALSE');
@@ -21,7 +21,7 @@ app.get('/members', async (req, res) => {
   }
 });
 
-// 2. GET: Fetch winners only (For the History Tab)
+// 2. GET: Fetch winners only
 app.get('/winners', async (req, res) => {
   try {
     const result = await pool.query(
@@ -47,7 +47,7 @@ app.post('/mark-winner', async (req, res) => {
   }
 });
 
-// 4. POST: Add a new member (From the App)
+// 4. POST: Add a new member
 app.post('/add-member', async (req, res) => {
   const { full_name } = req.body;
   try {
@@ -58,7 +58,18 @@ app.post('/add-member', async (req, res) => {
   }
 });
 
-// 5. POST: Reset the entire cycle
+// 5. DELETE: Remove a member (NEW)
+app.delete('/delete-member/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query('DELETE FROM equb_members WHERE id = $1', [id]);
+    res.json({ message: 'Member deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 6. POST: Reset the entire cycle
 app.post('/reset-cycle', async (req, res) => {
   try {
     await pool.query('UPDATE equb_members SET has_won = FALSE, draw_date = NULL');
