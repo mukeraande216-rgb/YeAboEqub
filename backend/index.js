@@ -21,6 +21,20 @@ app.get('/members', async (req, res) => {
   }
 });
 
+// POST: Mark a specific winner (THIS WAS MISSING)
+app.post('/mark-winner', async (req, res) => {
+  const { id } = req.body;
+  try {
+    await pool.query(
+      'UPDATE equb_members SET has_won = TRUE, draw_date = NOW() WHERE id = $1',
+      [id]
+    );
+    res.json({ message: 'Winner marked successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // POST: Reset the entire cycle
 app.post('/reset-cycle', async (req, res) => {
   try {
@@ -31,7 +45,7 @@ app.post('/reset-cycle', async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 10000; // Render uses 10000 by default
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server is running on port ${PORT}`);
 });
