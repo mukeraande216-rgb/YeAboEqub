@@ -22,7 +22,7 @@ class EqubAppHome extends StatefulWidget {
 
 class _EqubAppHomeState extends State<EqubAppHome> {
   int _selectedIndex = 0;
-  final String adminPin = "1234"; // 🔐 CHANGE THIS TO YOUR DESIRED PIN
+  final String adminPin = "0516"; // 🔐 CHANGE THIS TO YOUR DESIRED PIN
 
   final List<Widget> _pages = [
     EqubWheelPage(),
