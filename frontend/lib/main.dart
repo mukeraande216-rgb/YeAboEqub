@@ -20,16 +20,18 @@ class _EqubWheelState extends State<EqubWheel> {
   bool isLoading = true;
   bool isSpinning = false;
 
+  // YOUR PRODUCTION API URL
+  final String baseUrl = "https://yeabo-backend.onrender.com";
+
   @override
   void initState() {
     super.initState();
     fetchMembers();
   }
 
-  // Fetch only eligible members
   Future<void> fetchMembers() async {
     try {
-      final response = await http.get(Uri.parse('http://localhost:3000/members'));
+      final response = await http.get(Uri.parse('$baseUrl/members'));
       if (response.statusCode == 200) {
         setState(() {
           members = json.decode(response.body);
@@ -41,19 +43,17 @@ class _EqubWheelState extends State<EqubWheel> {
     }
   }
 
-  // Tell backend this person won
   Future<void> markWinner(int id) async {
     await http.post(
-      Uri.parse('http://localhost:3000/mark-winner'),
+      Uri.parse('$baseUrl/mark-winner'),
       headers: {"Content-Type": "application/json"},
       body: jsonEncode({"id": id}),
     );
   }
 
-  // Reset the entire Equb
   Future<void> resetCycle() async {
     setState(() => isLoading = true);
-    await http.post(Uri.parse('http://localhost:3000/reset-cycle'));
+    await http.post(Uri.parse('$baseUrl/reset-cycle'));
     await fetchMembers();
   }
 
@@ -63,7 +63,6 @@ class _EqubWheelState extends State<EqubWheel> {
       return Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    // CYCLE COMPLETE SCREEN
     if (members.isEmpty) {
       return Scaffold(
         body: Center(
@@ -88,7 +87,6 @@ class _EqubWheelState extends State<EqubWheel> {
       );
     }
 
-    // MAIN WHEEL SCREEN
     return Scaffold(
       appBar: AppBar(
         title: Text("YeAboEqub Digital Wheel"),
@@ -102,7 +100,6 @@ class _EqubWheelState extends State<EqubWheel> {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(20.0),
-              // SAFETY CHECK: Only show wheel if more than 1 person exists
               child: members.length > 1
                   ? FortuneWheel(
                       selected: selected.stream,
@@ -152,8 +149,6 @@ class _EqubWheelState extends State<EqubWheel> {
                   ? null
                   : () {
                       setState(() => isSpinning = true);
-
-                      // If 1 person left, index is always 0. If more, pick random.
                       int winnerIndex = members.length > 1
                           ? Fortune.randomInt(0, members.length)
                           : 0;
@@ -162,14 +157,12 @@ class _EqubWheelState extends State<EqubWheel> {
                         selected.add(winnerIndex);
                       }
 
-                      // Delay for animation effect (shorter for the last person)
                       Future.delayed(
                           Duration(seconds: members.length > 1 ? 5 : 1),
                           () async {
                         String winnerName = members[winnerIndex]['full_name'];
                         int winnerId = members[winnerIndex]['id'];
 
-                        // Show Dialog
                         await showDialog(
                           context: context,
                           barrierDismissible: false,
